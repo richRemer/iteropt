@@ -1,6 +1,15 @@
 iteropt Generator
 =================
-The `iteropt` generator function iterates over command-line options.
+The `iteropt` generator function iterates over command-line options.  Each
+iteration yields a 2-tuple with the option name and a function which can be used
+to read the option value.
+
+The arguments passed to the `iteropt` function are removed as they are read.  By
+calling the second function argument to read the option value, additional
+arguments may be consumed.
+
+When the `iteropt` function encounters a non-option argument, no more values
+will be yielded.
 
 Example
 -------
