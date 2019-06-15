@@ -115,4 +115,12 @@ describe("iteropt(string[])", () => {
             }
         }
     });
+
+    it("should errror if option value is read twice", () => {
+        for (let [opt, optval] of iteropt(argv)) {
+            optval();
+            expect(optval).to.throwError();
+            break;
+        }
+    });
 });
