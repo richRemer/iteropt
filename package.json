@@ -1,6 +1,6 @@
 {
   "name": "iteropt",
-  "version": "0.0.1-alpha1",
+  "version": "0.0.1-beta1",
   "description": "iterate over CLI options",
   "main": "iteropt.js",
   "directories": {

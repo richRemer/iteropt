@@ -1,7 +1,7 @@
 const expect = require("expect.js");
 const iteropt = require("..");
 
-describe("iteropt(string[])", () => {
+describe("*iteropt(string[])", () => {
     let argv;
 
     beforeEach(() => {
@@ -15,112 +15,97 @@ describe("iteropt(string[])", () => {
     });
 
     it("should read options from arguments", () => {
-        let done = false;
-        let foo = false;
+        const iter = iteropt(argv);
+        const [opt] = iter.next().value;
 
-        for (let [opt] of iteropt(argv)) {
-            switch (opt) {
-                case "--foo": foo = true; break;
-                default: done = true;
-            }
-
-            if (done) break;
-        }
-
-        expect(foo).to.be(true);
+        expect(opt).to.be("--foo");
     });
 
     it("should allow reading option value", () => {
-        let done = false;
-        let foo = false;
-        let baz = false;
+        const iter = iteropt(argv);
+        let opt, optval;
 
-        for (let [opt, optval] of iteropt(argv)) {
-            switch (opt) {
-                case "--foo": foo = optval(); break;
-                case "--baz": baz = optval(); break;
-                default: done = true;
-            }
+        [opt, optval] = iter.next().value;
+        expect(opt).to.be("--foo");
+        expect(optval()).to.be("bar");
 
-            if (done) break;
-        }
-
-        expect(foo).to.be("bar");
-        expect(baz).to.be("bang");
+        [opt, optval] = iter.next().value;
+        expect(opt).to.be("--baz");
+        expect(optval()).to.be("bang");
     });
 
     it("should expand single-letter options", () => {
-        let done = false;
-        let zeta = false;
-        let delta = false;
+        const iter = iteropt(argv);
+        let opt, optval;
 
-        for (let [opt, optval] of iteropt(argv)) {
-            switch (opt) {
-                case "--foo": optval(); break;
-                case "--baz": optval(); break;
-                case "-z": zeta = true; break;
-                case "-d": delta = optval(); break;
-                default: done = true;
-            }
+        iter.next().value[1]();     // --foo bar
+        iter.next().value[1]();     // --baz=bang
 
-            if (done) break;
-        }
+        [opt, optval] = iter.next().value;
+        expect(opt).to.be("-z");
 
-        expect(zeta).to.be(true);
-        expect(delta).to.be("foo");
+        [opt, optval] = iter.next().value;
+        expect(opt).to.be("-d");
+        expect(optval()).to.be("foo");
     });
 
     it("should recognize option terminator", () => {
-        let delta = false;
+        const iter = iteropt(argv);
 
-        for (let [opt, optval] of iteropt(argv)) {
-            switch (opt) {
-                case "--foo":
-                case "--baz":
-                case "-d": delta = optval(); break;
-                case "-z": break;
-                default: throw new Error("iterator did not terminate");
-            }
-        }
+        iter.next().value[1]();     // --foo bar
+        iter.next().value[1]();     // --baz=bang
+        iter.next().value[1]();     // -zdfoo
 
-        expect(delta).to.be("foo");
-        expect(argv[0]).to.be("--blargh")
+        expect(iter.next().done).to.be(true);
+    });
+
+    it("should leave leftover arguments", () => {
+        const iter = iteropt(argv);
+
+        iter.next().value[1]();     // --foo bar
+        iter.next().value[1]();     // --baz=bang
+        iter.next().value[1]();     // -zdfoo
+        iter.next();
+
+        expect(argv.length).to.be(1);
+        expect(argv[0]).to.be("--blargh");
     });
 
     it("should error if option value is not available", () => {
-        let foo = false;
-        argv = ["--foo"];
-
-        for (let [opt, optval] of iteropt(argv)) {
-            switch (opt) {
-                case "--foo":
-                    foo = true;
-                    expect(optval).to.throwError();
-                    break;
-                default: throw new Error("should not be here");
-            }
-        }
-
-        expect(foo).to.be(true);
+        const iter = iteropt(["--foo"]);
+        expect(iter.next().value[1]).to.throwError();
     });
 
     it("should error if option value is not read", () => {
         argv = ["--foo=bar"];
 
-        expect(read).to.throwError();
+        const iter = iteropt(argv);
 
-        function read() {
-            for (let [opt, optval] of iteropt(argv)) {
-                // just looping to end
-            }
-        }
+        iter.next();
+        expect(() => iter.next()).to.throwError();
+    });
+
+    it("should set optval.required if option value must be read", () => {
+        const iter = iteropt(argv);
+        let opt, optval;
+
+        [opt, optval] = iter.next().value;  // --foo bar
+        expect(optval.required).to.be(undefined);
+        optval();
+
+        [opt, optval] = iter.next().value;  // --baz=bang
+        expect(optval.required).to.be(true);
+        optval();
+
+        [opt, optval] = iter.next().value;  // -zdfoo
+        expect(optval.required).to.be(undefined);
     });
 
     it("should errror if option value is read twice", () => {
-        for (let [opt, optval] of iteropt(argv)) {
-            optval();
-            expect(optval).to.throwError();
-            break;
-        }
+        const iter = iteropt(argv);
+        const [opt, optval] = iter.next().value;
+
+        optval();
+        expect(optval).to.throwError();
     });
 });

@@ -14,6 +14,7 @@ function* iterate(args) {
             return;
         } else if (longopt(curr) && hasval(curr)) {
             [opt, val] = splitlong(curr);
+            optval.required = true;
             yield [opt, optval];
         } else if (shortopt(curr) && hasval(curr)) {
             [opt, val] = [curr.slice(0,2), curr.slice(2)];
@@ -37,6 +38,7 @@ function* iterate(args) {
         opt = undefined;
         val = undefined;
         valread = false;
+        delete optval.required;
     }
 
     function optval() {
