@@ -1,0 +1,29 @@
+{
+  "name": "iteropt",
+  "version": "0.0.1-alpha1",
+  "description": "iterate over CLI options",
+  "main": "iteropt.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "mocha"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/richRemer/iteropt.git"
+  },
+  "keywords": [
+    "getopt"
+  ],
+  "author": "Richard <reanjr@gmail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/richRemer/iteropt/issues"
+  },
+  "homepage": "https://github.com/richRemer/iteropt#readme",
+  "devDependencies": {
+    "expect.js": "^0.3.1",
+    "mocha": "^6.1.4"
+  }
+}
