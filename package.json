@@ -17,7 +17,7 @@
   "keywords": [
     "getopt"
   ],
-  "author": "Richard <reanjr@gmail.com>",
+  "author": "Richard Remer <reanjr@gmail.com>",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/richRemer/iteropt/issues"
