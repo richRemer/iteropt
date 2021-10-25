@@ -1,51 +1,27 @@
 iteropt Generator
 =================
 The `iteropt` generator function iterates over command-line options.  Each
-iteration yields a 2-tuple with the option name and a function which can be used
-to read the option value.
-
-The arguments passed to the `iteropt` function are removed as they are read.  By
-calling the second function argument to read the option value, additional
-arguments may be consumed.
-
-When the `iteropt` function encounters a non-option argument, no more values
-will be yielded.
+iteration yields an option with name and value or an argument string.
 
 Example
 -------
 
 ```js
 const iteropt = require("iteropt");
-const args = process.argv.slice(2); // first two args are node and script
+const args = [...process.argv]; // iteropt skips first 2 args by default
 
 let verbosity = 0;
 let dir = process.cwd();
 
-try {
-    for (let [opt, optval] of iteropt(args)) {
-        switch (opt) {
-            case "-v":
-            case "--verbose":
-                verbosity++;
-                break;
-            case "-q":
-            case "--quiet":
-                verbosity--;
-                break;
-            case "-C":
-            case "--dir":
-                dir = optval();
-                break;
-            default:
-                throw new iteropt.CLIError(`unknown option ${opt}`);
-        }
-    }
-} catch (err) {
-    if (err instanceof CLIError) {
-        console.error(err.message);
-    } else {
-        console.error(err.stack);
-    }
+const iterate = iteropt("vqC:", "verbose", "quiet", "dir=");
+
+for (let {name, value, string} of iteropt(args)) {
+  switch (name) {
+    case "-v":  case "--verbose": verbosity++;  break;
+    case "-q":  case "--quiet":   verbosity--;  break;
+    case "-C":  case "--dir":     dir = value;  break;
+    default: throw new Error(`unexpected argument: ${string}`);
+  }
 }
 
 console.log("verbosity:", verbosity);

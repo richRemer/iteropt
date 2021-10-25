@@ -1,183 +1,180 @@
-/**
- * @param {object} [options]
- * @param {boolean} [options.pluck]     Remove options from arguments array
- * @param {number} [options.skip_args]  Number of initial arguments to skip
- * @param {string} [options.val_chars]  Extra short options requiring values
- * @param {string[]} argv               Arguments array
- * @yields {CLIOption}
- */
-export default function* iterate({
-  pluck=false,
-  skip_args=2,
-  val_chars=""
-}={}, argv) {
-  if (arguments.length === 1) {
-    argv = arguments[0];
-  }
+export default function iterator(posix, ...gnu) {
+  return function* iterate({skip_args=2, error=()=>{}}={}, argv) {
+    const parser = new Parser(posix, ...gnu);
+    let lastToken, terminated = false;
 
-  const state = new IterationState({argv, index: skip_args, val_chars});
+    if (arguments.length === 1) {
+      argv = arguments[0];
+    }
 
-  while (!state.complete) {
-    yield new CLIOption(state);
-    if (pluck && state.argstate !== "plucked") state.pluck();
-    state.next();
+    argv = argv.slice(skip_args);
+
+    for (const arg of argv) {
+      const parsed = parser.parse(arg);
+
+      if (parsed instanceof Error) {
+        error(parsed.message);
+        throw new Error(`bad usage: ${parsed.message}`);
+      }
+
+      for (const token of parsed) {
+        if (terminated) {
+          yield {string: token, parser};
+        } else if (token === "--") {
+          yield {string: token, parser};
+          terminated = true;
+        } else if (needValue(parser, lastToken)) {
+          yield {name: lastToken, value: token, parser};
+        } else if (Parser.isOption(token) && !needValue(parser, token)) {
+          yield {name: token, value: true, parser};
+        } else if (!Parser.isOption(token)) {
+          yield {string: token, parser};
+        }
+
+        lastToken = token;
+      }
+    }
+
+    const err = parser.end();
+
+    if (err) {
+      error(err.message);
+      throw new Error(`bad usage: ${err.message}`);
+    }
   }
 }
 
-class IterationState {
-  constructor({argv, index=0, char_index=false, val_chars=""}) {
-    this.argv = argv;
-    this.index = index;
-    this.char_index = char_index;
-    this.val_chars = val_chars
-    this.argstate = "next";
+class Parser {
+  constructor(posix, ...gnu) {
+    this.defined = {};
     this.terminated = false;
-    this.normalize();
+    this.expectsArgument = false;
+
+    this.define(posix, ...gnu);
   }
 
-  get complete() {
-    return this.index >= this.argv.length;
+  static isGnuOption(token) {
+    return /^--[a-z0-9][-a-z0-9_]*[a-z0-9](=.*)?$/i.test(token);
   }
 
-  get name() {
+  static isOption(token) {
+    return Parser.isPosixOption(token) || Parser.isGnuOption(token);
+  }
+
+  static isPosixOption(token) {
+    return /^-[a-z0-9]/i.test(token);
+  }
+
+  define(posix, ...gnu) {
+    let lastch;
+
+    for (const ch of posix) {
+      if (ch === ":" && lastch && lastch !== ":") {
+        this.defined[lastch] = true;
+      } else if (ch === ":") {
+        throw new Error("value specifier without option specifier");
+      } else if (ch in this.defined) {
+        throw new Error(`option specifier '${ch}' redefined`);
+      } else if (/[a-z0-9]/i.test(ch)) {
+        this.defined[ch] = false;
+        lastch = ch;
+      } else {
+        throw new Error(`'${ch}' is not a valid option specifier`);
+      }
+    }
+
+    for (let opt of gnu) {
+      let value = false;
+
+      if ("=" === opt.slice(-1)) {
+        value = true;
+        opt = opt.slice(0, -1);
+      }
+
+      if (!opt) {
+        throw new Error("empty option specifier");
+      } else if (opt in this.defined) {
+        throw new Error(`option specifier '${opt}' redefined`);
+      } else if (/^[a-z0-9][-a-z0-9_]*[a-z0-9]$/i.test(opt)) {
+        this.defined[opt] = value;
+      } else {
+        throw new Error(`'${opt}' is not a valid option specifier`);
+      }
+    }
+  }
+
+  parse(token) {
     if (this.terminated) {
-      return undefined;
-    } else if (this.short()) {
-      const char = this.string[this.char_index];
-      return char ? "-"+char : undefined;
-    } else if (this.long() && this.char_index) {
-      return this.string.slice(0, this.char_index-1);
-    } else if (this.long()) {
-      return this.string;
-    }
-  }
-
-  get string() {
-    return this.argv[this.index];
-  }
-
-  get value() {
-    if (!this.terminated) {
-      this.argstate = "valued";
-
-      if (this.short() && this.string[this.char_index+1] === ":") {
-        return this.string.slice(this.char_index+2);
-      } else if (this.short() && this.char_index < this.string.length-1) {
-        return this.string.slice(this.char_index+1);
-      } else if (this.long() && this.char_index) {
-        return this.string.slice(this.char_index);
-      }
-    }
-  }
-
-  long() {
-    return !this.terminated && /^--[a-z0-9]/i.test(this.string);
-  }
-
-  next() {
-    if (this.argstate !== "plucked") {
-      const by_char = this.short() && this.char_index+1<this.string.length
-        && this.argstate !== "valued" && this.string[this.char_index+1] !== ":"
-        && !this.val_chars.includes(this.string[this.char_index]);
-
-      if (by_char) {
-        this.char_index++;
-      } else {
-        this.char_index = false;
-        this.index++;
-      }
-
-      if (this.argstate === "peeked") {
-        this.index++;
-      }
-    }
-
-    this.argstate = "next";
-    this.normalize();
-  }
-
-  normalize() {
-    if (this.string === "--") {
+      return [token];
+    } else if (this.expectsArgument && token[0] === "-") {
+      return new Error(`option expects argument -- ${this.expectsArgument}`);
+    } else if (this.expectsArgument) {
+      this.expectsArgument = false;
+      return [token];
+    } else if (token === "--") {
       this.terminated = true;
-    } else if (this.char_index === false && this.short()) {
-      this.char_index = 1;
-    } else if (this.char_index === false && this.long()) {
-      this.char_index = this.string.indexOf("=") + 1;
-    }
-  }
+      return [token];
+    } else if (Parser.isGnuOption(token) && token.includes("=")) {
+      const option = token.split("=", 1)[0].slice(2);
 
-  peek() {
-    if (this.index+1 < this.argv.length) {
-      this.argstate = "peeked";
-      return this.argv[this.index+1];
-    } else {
-      throw new Error(`missing value for ${this.name} option`);
-    }
-  }
-
-  pluck() {
-    const {argstate, argv, char_index, index, string, val_chars} = this;
-
-    if (argstate !== "plucked") {
-      const short = this.short();
-      const valued = argstate === "valued";
-      const has_data = short && char_index+1<string.length;
-      const has_val = valued || val_chars.includes(string[char_index]);
-
-      if (argstate === "peeked" || (short && !has_data && has_val)) {
-        argv.splice(index+1, 1);
-      }
-
-      if (short && has_data && has_val && char_index>1) {
-        argv[index] = string.slice(0, char_index);
-        this.index++;
-        this.char_index = false;
-      } else if (short && has_data && !has_val) {
-        argv[index] = string.slice(0, char_index) + string.slice(char_index+1);
+      if (this.defined[option] === false) {
+        return new Error(`option expects no argument -- ${option}`);
+      } else if (this.defined[option] === true) {
+        const i = token.indexOf("=");
+        return [token.slice(0, i), token.slice(i+1)];
       } else {
-        argv.splice(index, 1);
-        this.char_index = false;
+        return new Error(`illegal option -- ${option}`);
+      }
+    } else if (Parser.isGnuOption(token)) {
+      const option = token.slice(2);
+
+      if (this.defined[option] === false) {
+        return [token];
+      } else if (this.defined[option] === true) {
+        this.expectsArgument = option;
+        return [token];
+      } else {
+        return new Error(`illegal option -- ${option}`);
+      }
+    } else if (Parser.isPosixOption(token)) {
+      const chars = token.slice(1);
+      const tokens = [];
+
+      for (const ch of chars) {
+        if (this.defined[ch] === false) {
+          tokens.push(`-${ch}`);
+        } else if (this.defined[ch] === true) {
+          const value = token.slice(token.indexOf(ch)+1);
+
+          if (value) {
+            tokens.push(`-${ch}`, value);
+            break;
+          } else {
+            tokens.push(`-${ch}`);
+            this.expectsArgument = ch;
+          }
+        } else {
+          return new Error(`illegal option -- ${ch}`);
+        }
       }
 
-      this.argstate = "plucked";
-      this.normalize();
+      return tokens;
+    } else {
+      return [token];
     }
   }
 
-  short() {
-    return !this.terminated && /^-[a-z0-9]/i.test(this.string);
+  end() {
+    if (this.expectsArgument) {
+      return new Error(`option expects argument -- ${this.expectsArgument}`);
+    }
   }
 }
 
-class CLIOption {
-  constructor(state) {
-    Object.defineProperty(this, "state", {
-      configurable: true,
-      value: state
-    });
-  }
-
-  get name() {
-    return this.state.name;
-  }
-
-  get string() {
-    return this.state.string;
-  }
-
-  get value() {
-    return this.state.value || this.state.peek();
-  }
-
-  pluck() {
-    this.state.pluck();
-    this.destroy();
-  }
-
-  destroy() {
-    Object.defineProperty(this, "state", {
-      configurable: true,
-      value: undefined
-    });
+function needValue(parser, option) {
+  if (Parser.isGnuOption(option)) {
+    return parser.defined[option.slice(2)];
+  } else if (Parser.isPosixOption(option)) {
+    return parser.defined[option[1]];
   }
 }
