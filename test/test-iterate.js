@@ -1,5 +1,5 @@
 import expect from "expect.js";
-import iterator from "iteropt";
+import iterator, {CLIError} from "iteropt";
 
 describe("iterator(string, ...string)", () => {
   it("should return *iterate function", () => {
@@ -93,21 +93,21 @@ describe("*iterate(object, string[])", () => {
     const argv = ["-A", "--option-like"];
     const iterable = iterate({skip_args: 0}, argv);
 
-    expect(() => iterable.next()).to.throwError();
+    expect(() => iterable.next()).to.throwError(new CLIError());
   });
 
   it("should throw if argument includes unexpected value", () => {
     const argv = ["--yes=foo"];
     const iterable = iterate({skip_args: 0}, argv);
 
-    expect(() => iterable.next()).to.throwError();
+    expect(() => iterable.next()).to.throwError(new CLIError());
   });
 
   it("should throw if option is not defined", () => {
     for (const arg of ["-a", "--unknown", "-xa"]) {
       const iterable = iterate({skip_args: 0}, [arg]);
 
-      expect(() => iterable.next()).to.throwError();
+      expect(() => iterable.next()).to.throwError(new CLIError());
     }
   });
 
@@ -115,7 +115,7 @@ describe("*iterate(object, string[])", () => {
     const argv = ["--foo"];
     const iterable = iterate({skip_args: 0}, argv);
 
-    expect(() => iterable.next()).to.throwError();
+    expect(() => iterable.next()).to.throwError(new CLIError());
   });
 });
 
@@ -132,5 +132,11 @@ describe("*iterate(string[])", () => {
 
     expect(iterable.next().value.string).to.be("baz");
     expect(iterable.next().done).to.be(true);
+  });
+});
+
+describe("CLIError", () => {
+  it("should extend Error", () => {
+    expect(new CLIError()).to.be.an(Error);
   });
 });
