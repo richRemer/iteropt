@@ -1,13 +1,16 @@
 export default function iterator(posix, ...gnu) {
-  return function* iterate({error=()=>{}}={}, argv) {
+  return function *iterate(...args) {
+    let error;
+
+    if (typeof args[args.length-1] === "object") {
+      const options = args.pop();
+      error = options.error || (() => {});
+    }
+
     const parser = new Parser(posix, ...gnu);
     let lastToken, terminated = false;
 
-    if (arguments.length === 1) {
-      argv = arguments[0];
-    }
-
-    for (const arg of argv) {
+    for (const arg of args) {
       const parsed = parser.parse(arg);
 
       if (parsed instanceof Error) {
