@@ -1,20 +1,18 @@
 export default function iterator(posix, ...gnu) {
   return function *iterate(...args) {
-    let error;
-
-    if (typeof args[args.length-1] === "object") {
-      const options = args.pop();
-      error = options.error || (() => {});
-    }
-
+    const options = typeof args[args.length-1] === "object" ? args.pop() : {};
+    const console = options.console || undefined;
     const parser = new Parser(posix, ...gnu);
+
     let lastToken, terminated = false;
 
     for (const arg of args) {
       const parsed = parser.parse(arg);
 
-      if (parsed instanceof Error) {
-        error(parsed.message);
+      if (parsed instanceof Error && console) {
+        console.error(parsed.message);
+        return parsed;
+      } else if (parsed instanceof Error) {
         throw parsed;
       }
 
@@ -38,8 +36,10 @@ export default function iterator(posix, ...gnu) {
 
     const err = parser.end();
 
-    if (err) {
-      error(err.message);
+    if (err && console) {
+      console.error(err.message);
+      return err;
+    } else if (err) {
       throw err;
     }
   }

@@ -12,7 +12,7 @@ describe("iterator(string, ...string)", () => {
   });
 });
 
-describe("*iterate(string[])", () => {
+describe("*iterate(...string)", () => {
   let iterate;
 
   beforeEach(() => {
@@ -108,6 +108,23 @@ describe("*iterate(string[])", () => {
     const iterable = iterate(...argv);
 
     expect(() => iterable.next()).to.throwError(new CLIError());
+  });
+});
+
+describe("iterate(...string, {console})", () => {
+  let iterate, console, calledWith;
+
+  beforeEach(() => {
+    iterate = iterator("xyA:B:", "yes", "foo=", "bar=");
+    console = {error(msg) { calledWith = msg; }};
+  });
+
+  it("should log errors instead of throwing them", () => {
+    const argv = ["--unknown"];
+    const iterable = iterate(argv, {console});
+
+    expect(() => iterable.next()).to.not.throwError();
+    expect(calledWith).to.be.a("string");
   });
 });
 
