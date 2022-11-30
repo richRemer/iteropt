@@ -1,13 +1,11 @@
 export default function iterator(posix, ...gnu) {
-  return function* iterate({skip_args=2, error=()=>{}}={}, argv) {
+  return function* iterate({error=()=>{}}={}, argv) {
     const parser = new Parser(posix, ...gnu);
     let lastToken, terminated = false;
 
     if (arguments.length === 1) {
       argv = arguments[0];
     }
-
-    argv = argv.slice(skip_args);
 
     for (const arg of argv) {
       const parsed = parser.parse(arg);
