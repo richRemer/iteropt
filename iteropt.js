@@ -23,9 +23,9 @@ export default function iterator(posix, ...gnu) {
           yield {string: token, parser};
           terminated = true;
         } else if (needValue(parser, lastToken)) {
-          yield {name: lastToken, value: token, parser};
+          yield {opt: lastToken, val: token, parser};
         } else if (Parser.isOption(token) && !needValue(parser, token)) {
-          yield {name: token, value: true, parser};
+          yield {opt: token, val: true, parser};
         } else if (!Parser.isOption(token)) {
           yield {string: token, parser};
         }

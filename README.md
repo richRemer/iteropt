@@ -1,7 +1,7 @@
 iteropt Generator
 =================
 The `iteropt` generator function iterates over command-line options.  Each
-iteration yields an option with name and value or an argument string.
+iteration yields an option with option name and value or an argument string.
 
 Example
 -------
@@ -15,11 +15,11 @@ let dir = process.cwd();
 
 const iterate = iteropt("vqC:", "verbose", "quiet", "dir=");
 
-for (let {name, value, string} of iteropt(args)) {
-  switch (name) {
+for (let {opt, val, string} of iteropt(args)) {
+  switch (opt) {
     case "-v":  case "--verbose": verbosity++;  break;
     case "-q":  case "--quiet":   verbosity--;  break;
-    case "-C":  case "--dir":     dir = value;  break;
+    case "-C":  case "--dir":     dir = val;    break;
     default: throw new Error(`unexpected argument: ${string}`);
   }
 }

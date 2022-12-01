@@ -23,8 +23,8 @@ describe("*iterate(...string)", () => {
     const argv = ["-x", "--yes", "file.txt"];
     const iterable = iterate(...argv);
 
-    expect(iterable.next().value.name).to.be("-x");
-    expect(iterable.next().value.name).to.be("--yes");
+    expect(iterable.next().value.opt).to.be("-x");
+    expect(iterable.next().value.opt).to.be("--yes");
     expect(iterable.next().value.string).to.be("file.txt");
     expect(iterable.next().done).to.be(true);
   });
@@ -33,9 +33,9 @@ describe("*iterate(...string)", () => {
     const argv = ["-x", "--yes", "file.txt"];
     const iterable = iterate(...argv);
 
-    expect(iterable.next().value.name).to.be("-x");
-    expect(iterable.next().value.name).to.be("--yes");
-    expect(iterable.next().value.name).to.be(undefined);
+    expect(iterable.next().value.opt).to.be("-x");
+    expect(iterable.next().value.opt).to.be("--yes");
+    expect(iterable.next().value.opt).to.be(undefined);
     expect(iterable.next().done).to.be(true);
   });
 
@@ -43,8 +43,8 @@ describe("*iterate(...string)", () => {
     const argv = ["-xy"];
     const iterable = iterate(...argv);
 
-    expect(iterable.next().value.name).to.be("-x");
-    expect(iterable.next().value.name).to.be("-y");
+    expect(iterable.next().value.opt).to.be("-x");
+    expect(iterable.next().value.opt).to.be("-y");
     expect(iterable.next().done).to.be(true);
   });
 
@@ -52,10 +52,10 @@ describe("*iterate(...string)", () => {
     const argv = ["-A", "1", "-B2", "--foo", "FOO", "--bar=BAR"];
     const iterable = iterate(...argv);
 
-    expect(iterable.next().value.value).to.be("1");
-    expect(iterable.next().value.value).to.be("2");
-    expect(iterable.next().value.value).to.be("FOO");
-    expect(iterable.next().value.value).to.be("BAR");
+    expect(iterable.next().value.val).to.be("1");
+    expect(iterable.next().value.val).to.be("2");
+    expect(iterable.next().value.val).to.be("FOO");
+    expect(iterable.next().value.val).to.be("BAR");
     expect(iterable.next().done).to.be(true);
   });
 
@@ -63,13 +63,13 @@ describe("*iterate(...string)", () => {
     const argv = ["-x", "--", "-xy"];
     const iterable = iterate(...argv);
 
-    expect(iterable.next().value.name).to.be("-x");
+    expect(iterable.next().value.opt).to.be("-x");
     expect(iterable.next().value.string).to.be("--");
 
-    const opt = iterable.next().value;
+    const option = iterable.next().value;
 
-    expect(opt.string).to.be("-xy");
-    expect(opt.name).to.be(undefined);
+    expect(option.string).to.be("-xy");
+    expect(option.opt).to.be(undefined);
     expect(iterable.next().done).to.be(true);
   });
 
@@ -77,7 +77,7 @@ describe("*iterate(...string)", () => {
     const argv = ["--foo=FOO"];
     const iterable = iterate(...argv);
 
-    expect(iterable.next().value.name).to.be("--foo");
+    expect(iterable.next().value.opt).to.be("--foo");
     expect(iterable.next().done).to.be(true);
   });
 
