@@ -127,12 +127,13 @@ describe("iterate(...string, {console})", () => {
     console = {error(msg) { calledWith = msg; }};
   });
 
-  it("should log errors instead of throwing them", () => {
+  it("should log errors", () => {
     const argv = ["--unknown"];
     const iterable = iterate(argv, {console});
+    const {err} = iterable.next().value;
 
-    expect(() => iterable.next()).to.not.throwError();
-    expect(calledWith).to.be.a("string");
+    expect(err).to.be.a("string");
+    expect(calledWith).to.be(err);
   });
 });
 
