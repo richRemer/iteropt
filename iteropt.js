@@ -18,16 +18,16 @@ export default function iterator(posix, ...gnu) {
 
       for (const token of parsed) {
         if (terminated) {
-          yield {string: token, parser};
+          yield {tok: token, parser};
         } else if (token === "--") {
-          yield {string: token, parser};
+          yield {tok: token, parser};
           terminated = true;
         } else if (needValue(parser, lastToken)) {
           yield {opt: lastToken, val: token, parser};
         } else if (Parser.isOption(token) && !needValue(parser, token)) {
           yield {opt: token, val: true, parser};
         } else if (!Parser.isOption(token)) {
-          yield {string: token, parser};
+          yield {tok: token, parser};
         }
 
         lastToken = token;

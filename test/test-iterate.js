@@ -25,7 +25,7 @@ describe("*iterate(...string)", () => {
 
     expect(iterable.next().value.opt).to.be("-x");
     expect(iterable.next().value.opt).to.be("--yes");
-    expect(iterable.next().value.string).to.be("file.txt");
+    expect(iterable.next().value.tok).to.be("file.txt");
     expect(iterable.next().done).to.be(true);
   });
 
@@ -64,11 +64,11 @@ describe("*iterate(...string)", () => {
     const iterable = iterate(...argv);
 
     expect(iterable.next().value.opt).to.be("-x");
-    expect(iterable.next().value.string).to.be("--");
+    expect(iterable.next().value.tok).to.be("--");
 
     const option = iterable.next().value;
 
-    expect(option.string).to.be("-xy");
+    expect(option.tok).to.be("-xy");
     expect(option.opt).to.be(undefined);
     expect(iterable.next().done).to.be(true);
   });
