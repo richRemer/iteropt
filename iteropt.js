@@ -84,7 +84,7 @@ class Parser {
     for (let opt of gnu) {
       let value = false;
 
-      if ("=" === opt.slice(-1)) {
+      if (":" === opt.slice(-1)) {
         value = true;
         opt = opt.slice(0, -1);
       }

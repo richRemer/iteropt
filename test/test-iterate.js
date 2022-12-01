@@ -16,7 +16,7 @@ describe("*iterate(...string)", () => {
   let iterate;
 
   beforeEach(() => {
-    iterate = iterator("xyA:B:", "yes", "foo=", "bar=");
+    iterate = iterator("xyA:B:", "yes", "foo:", "bar:");
   });
 
   it("should iterate over options and arguments", () => {
@@ -123,7 +123,7 @@ describe("iterate(...string, {console})", () => {
   let iterate, console, calledWith;
 
   beforeEach(() => {
-    iterate = iterator("xyA:B:", "yes", "foo=", "bar=");
+    iterate = iterator("xyA:B:", "yes", "foo:", "bar:");
     console = {error(msg) { calledWith = msg; }};
   });
 
