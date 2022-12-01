@@ -16,7 +16,7 @@ let dir = process.cwd();
 
 const iterate = iteropt("vqC:", "verbose", "quiet", "dir=");
 
-for (let {opt, val, tok, err} of iteropt(args)) {
+for (let {opt, val, tok, err} of iterate(...args)) {
   if (err) {
     console.error(err);
     process.exit(1);
