@@ -36,3 +36,11 @@ console.log("verbosity:", verbosity);
 console.log("dir:", dir);
 console.log("args:", args);
 ```
+
+Compatibility
+-------------
+Option parsing is based on the GNU **getopt** command, which in turn is based
+on **getopt()** from *<unistd.h>*.  Some features are not currently supported:
+
+ * alternative SCANNING MODES by passing "-" or "+" in short option string
+ * optional arguments
