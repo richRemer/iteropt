@@ -16,12 +16,19 @@ let dir = process.cwd();
 
 const iterate = iteropt("vqC:", "verbose", "quiet", "dir=");
 
-for (let {opt, val, tok} of iteropt(args)) {
+for (let {opt, val, tok, err} of iteropt(args)) {
+  if (err) {
+    console.error(err);
+    process.exit(1);
+  }
+
   switch (opt) {
     case "-v":  case "--verbose": verbosity++;  break;
     case "-q":  case "--quiet":   verbosity--;  break;
     case "-C":  case "--dir":     dir = val;    break;
-    default: throw new Error(`unexpected argument: ${tok}`);
+    default:
+      console.error(`unexpected argument -- ${tok}`);
+      process.exit(1);
   }
 }
 

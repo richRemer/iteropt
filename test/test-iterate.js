@@ -1,5 +1,5 @@
 import expect from "expect.js";
-import iterator, {CLIError} from "iteropt";
+import iterator from "iteropt";
 
 describe("iterator(string, ...string)", () => {
   it("should return *iterate function", () => {
@@ -81,33 +81,41 @@ describe("*iterate(...string)", () => {
     expect(iterable.next().done).to.be(true);
   });
 
-  it("should throw if expected argument looks like option", () => {
+  it("should end iteration on error", () => {
     const argv = ["-A", "--option-like"];
     const iterable = iterate(...argv);
 
-    expect(() => iterable.next()).to.throwError(new CLIError());
+    expect(iterable.next().value.err).to.be.a("string");
+    expect(iterable.next().done).to.be(true);
   });
 
-  it("should throw if argument includes unexpected value", () => {
+  it("should error if expected argument looks like option", () => {
+    const argv = ["-A", "--option-like"];
+    const iterable = iterate(...argv);
+
+    expect(iterable.next().value.err).to.be.a("string");
+  });
+
+  it("should error if argument includes unexpected value", () => {
     const argv = ["--yes=foo"];
     const iterable = iterate(...argv);
 
-    expect(() => iterable.next()).to.throwError(new CLIError());
+    expect(iterable.next().value.err).to.be.a("string");
   });
 
-  it("should throw if option is not defined", () => {
+  it("should error if option is not defined", () => {
     for (const arg of ["-a", "--unknown", "-xa"]) {
       const iterable = iterate(arg);
 
-      expect(() => iterable.next()).to.throwError(new CLIError());
+      expect(iterable.next().value.err).to.be.a("string");
     }
   });
 
-  it("should throw if final argument is missing", () => {
+  it("should error if final argument is missing", () => {
     const argv = ["--foo"];
     const iterable = iterate(...argv);
 
-    expect(() => iterable.next()).to.throwError(new CLIError());
+    expect(iterable.next().value.err).to.be.a("string");
   });
 });
 
@@ -128,8 +136,3 @@ describe("iterate(...string, {console})", () => {
   });
 });
 
-describe("CLIError", () => {
-  it("should extend Error", () => {
-    expect(new CLIError()).to.be.an(Error);
-  });
-});
