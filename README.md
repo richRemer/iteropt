@@ -9,7 +9,7 @@ Example
 
 ```js
 const iteropt = require("iteropt");
-const args = [...process.argv]; // iteropt skips first 2 args by default
+const args = [...process.argv.slice(2)];
 
 let verbosity = 0;
 let dir = process.cwd();
