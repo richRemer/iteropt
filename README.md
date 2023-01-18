@@ -14,7 +14,7 @@ const args = [...process.argv.slice(2)];
 let verbosity = 0;
 let dir = process.cwd();
 
-const iterate = iteropt("vqC:", "verbose", "quiet", "dir=");
+const iterate = iteropt("vqC:", "verbose", "quiet", "dir:");
 
 for (let {opt, val, tok, err} of iterate(...args)) {
   if (err) {
