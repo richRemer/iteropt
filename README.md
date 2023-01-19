@@ -8,24 +8,26 @@ Example
 -------
 
 ```js
-const iteropt = require("iteropt");
+import makeIteropt from "iteropt";
+
 const args = [...process.argv.slice(2)];
 
 let verbosity = 0;
 let dir = process.cwd();
 
-const iterate = iteropt("vqC:", "verbose", "quiet", "dir:");
+const iteropt = makeIteropt("vqC:", "verbose", "quiet", "dir:");
 
-for (let {opt, val, tok, err} of iterate(...args)) {
+for (let {opt, val, tok, err} of iteropt(...args)) {
   if (err) {
     console.error(err);
     process.exit(1);
   }
 
-  switch (opt) {
+  switch (opt || tok) {
     case "-v":  case "--verbose": verbosity++;  break;
     case "-q":  case "--quiet":   verbosity--;  break;
     case "-C":  case "--dir":     dir = val;    break;
+    case "--":                                  break;
     default:
       console.error(`unexpected argument -- ${tok}`);
       process.exit(1);
@@ -34,7 +36,6 @@ for (let {opt, val, tok, err} of iterate(...args)) {
 
 console.log("verbosity:", verbosity);
 console.log("dir:", dir);
-console.log("args:", args);
 ```
 
 Compatibility
@@ -42,5 +43,8 @@ Compatibility
 Option parsing is based on the GNU **getopt** command, which in turn is based
 on **getopt()** from *<unistd.h>*.  Some features are not currently supported:
 
- * alternative SCANNING MODES by passing "-" or "+" in short option string
- * optional arguments
+ * allowing long options to start with "-" (**-a**, **--alternate** option)
+ * setting POSIXLY_CORRECT environment variable to set scanning mode
+ * setting GETOPT_COMPATIBLE environment variable for compatibility with shell
+   built-ins
+ * specifying "::" to allow optional arguments
