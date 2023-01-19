@@ -1,6 +1,6 @@
 {
   "name": "iteropt",
-  "version": "1.0.0-beta9",
+  "version": "1.0.0",
   "description": "iterate over CLI options",
   "type": "module",
   "exports": "./iteropt.js",
@@ -24,7 +24,7 @@
   },
   "homepage": "https://github.com/richRemer/iteropt#readme",
   "devDependencies": {
-    "expect.js": "^0.3.1",
-    "mocha": "^9.1.1"
+    "expect.js": "*",
+    "mocha": "*"
   }
 }

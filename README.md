@@ -17,7 +17,12 @@ let dir = process.cwd();
 
 const iteropt = makeIteropt("vqC:", "verbose", "quiet", "dir:");
 
-for (let {opt, val, tok, err} of iteropt(...args)) {
+for (let {
+  opt,      // set to option name if argument is option
+  val,      // set to option value if option has value
+  tok,      // set to un-parsed argument if not option
+  err       // set to error message if parse error occurs
+} of iteropt(...args)) {
   if (err) {
     console.error(err);
     process.exit(1);
