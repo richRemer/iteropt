@@ -1,32 +1,57 @@
-export default function iterator(posix, ...gnu) {
-  return function* iterate({error=()=>{}}={}, argv) {
+const ModeMove = Symbol("move non-option arguments to end");
+const ModeYield = Symbol("yield non-option arguments");
+const ModeStop = Symbol("stop option parsing at non-option argument");
+
+export default function makeIteropt(posix, ...gnu) {
+  let mode = process.env.POSIXLY_CORRECT ? ModeStop : ModeMove;
+
+  switch (posix[0]) {
+    case "-": mode = ModeYield; posix = posix.slice(1); break;
+    case "+": mode = ModeStop; posix = posix.slice(1); break;
+  }
+
+  return function *iteropt(...args) {
+    const options = typeof args[args.length-1] === "object" ? args.pop() : {};
+    const console = options.console || undefined;
     const parser = new Parser(posix, ...gnu);
+    const moved = [];
+
     let lastToken, terminated = false;
 
-    if (arguments.length === 1) {
-      argv = arguments[0];
-    }
-
-    for (const arg of argv) {
+    for (const arg of args) {
       const parsed = parser.parse(arg);
 
       if (parsed instanceof Error) {
-        error(parsed.message);
-        throw parsed;
+        if (console) console.error(parsed.message);
+        yield {err: parsed.message};
+        return;
       }
 
       for (const token of parsed) {
         if (terminated) {
-          yield {string: token, parser};
+          yield {tok: token, parser};
         } else if (token === "--") {
-          yield {string: token, parser};
+          yield {tok: token, parser};
           terminated = true;
         } else if (needValue(parser, lastToken)) {
-          yield {name: lastToken, value: token, parser};
+          yield {opt: lastToken, val: token, parser};
         } else if (Parser.isOption(token) && !needValue(parser, token)) {
-          yield {name: token, value: true, parser};
+          yield {opt: token, val: true, parser};
         } else if (!Parser.isOption(token)) {
-          yield {string: token, parser};
+          switch (mode) {
+            case ModeMove:
+              moved.push({tok: token, parser});
+              break;
+            case ModeYield:
+              yield {tok: token, parser};
+              break;
+            case ModeStop:
+              yield {tok: "--", parser};
+              terminated = true;
+              yield {tok: token, parser};
+              break;
+            default: /* TODO: throw? */
+          }
         }
 
         lastToken = token;
@@ -36,13 +61,14 @@ export default function iterator(posix, ...gnu) {
     const err = parser.end();
 
     if (err) {
-      error(err.message);
-      throw err;
+      if (console) console.error(err.message);
+      yield {err: err.message};
     }
+
+    if (!terminated) yield {tok: "--", parser};
+    yield* moved;
   }
 }
-
-export class CLIError extends Error {};
 
 class Parser {
   constructor(posix, ...gnu) {
@@ -86,7 +112,7 @@ class Parser {
     for (let opt of gnu) {
       let value = false;
 
-      if ("=" === opt.slice(-1)) {
+      if (":" === opt.slice(-1)) {
         value = true;
         opt = opt.slice(0, -1);
       }
@@ -107,7 +133,7 @@ class Parser {
     if (this.terminated) {
       return [token];
     } else if (this.expectsArgument && token[0] === "-") {
-      return new CLIError(`option expects argument -- ${this.expectsArgument}`);
+      return new Error(`option expects argument -- ${this.expectsArgument}`);
     } else if (this.expectsArgument) {
       this.expectsArgument = false;
       return [token];
@@ -118,12 +144,12 @@ class Parser {
       const option = token.split("=", 1)[0].slice(2);
 
       if (this.defined[option] === false) {
-        return new CLIError(`option expects no argument -- ${option}`);
+        return new Error(`option expects no argument -- ${option}`);
       } else if (this.defined[option] === true) {
         const i = token.indexOf("=");
         return [token.slice(0, i), token.slice(i+1)];
       } else {
-        return new CLIError(`illegal option -- ${option}`);
+        return new Error(`illegal option -- ${option}`);
       }
     } else if (Parser.isGnuOption(token)) {
       const option = token.slice(2);
@@ -134,7 +160,7 @@ class Parser {
         this.expectsArgument = option;
         return [token];
       } else {
-        return new CLIError(`illegal option -- ${option}`);
+        return new Error(`illegal option -- ${option}`);
       }
     } else if (Parser.isPosixOption(token)) {
       const chars = token.slice(1);
@@ -154,7 +180,7 @@ class Parser {
             this.expectsArgument = ch;
           }
         } else {
-          return new CLIError(`illegal option -- ${ch}`);
+          return new Error(`illegal option -- ${ch}`);
         }
       }
 
@@ -166,7 +192,7 @@ class Parser {
 
   end() {
     if (this.expectsArgument) {
-      return new CLIError(`option expects argument -- ${this.expectsArgument}`);
+      return new Error(`option expects argument -- ${this.expectsArgument}`);
     }
   }
 }
