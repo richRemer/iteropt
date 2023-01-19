@@ -1,8 +1,20 @@
-export default function iterator(posix, ...gnu) {
-  return function *iterate(...args) {
+const ModeMove = Symbol("move non-option arguments to end");
+const ModeYield = Symbol("yield non-option arguments");
+const ModeStop = Symbol("stop option parsing at non-option argument");
+
+export default function makeIteropt(posix, ...gnu) {
+  let mode = process.env.POSIXLY_CORRECT ? ModeStop : ModeMove;
+
+  switch (posix[0]) {
+    case "-": mode = ModeYield; posix = posix.slice(1); break;
+    case "+": mode = ModeStop; posix = posix.slice(1); break;
+  }
+
+  return function *iteropt(...args) {
     const options = typeof args[args.length-1] === "object" ? args.pop() : {};
     const console = options.console || undefined;
     const parser = new Parser(posix, ...gnu);
+    const moved = [];
 
     let lastToken, terminated = false;
 
@@ -26,7 +38,20 @@ export default function iterator(posix, ...gnu) {
         } else if (Parser.isOption(token) && !needValue(parser, token)) {
           yield {opt: token, val: true, parser};
         } else if (!Parser.isOption(token)) {
-          yield {tok: token, parser};
+          switch (mode) {
+            case ModeMove:
+              moved.push({tok: token, parser});
+              break;
+            case ModeYield:
+              yield {tok: token, parser};
+              break;
+            case ModeStop:
+              yield {tok: "--", parser};
+              terminated = true;
+              yield {tok: token, parser};
+              break;
+            default: /* TODO: throw? */
+          }
         }
 
         lastToken = token;
@@ -39,6 +64,9 @@ export default function iterator(posix, ...gnu) {
       if (console) console.error(err.message);
       yield {err: err.message};
     }
+
+    if (!terminated) yield {tok: "--", parser};
+    yield* moved;
   }
 }
 

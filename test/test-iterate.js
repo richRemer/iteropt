@@ -1,54 +1,64 @@
 import expect from "expect.js";
 import iterator from "iteropt";
 
-describe("iterator(string, ...string)", () => {
-  it("should return *iterate function", () => {
-    const iterate = iterator("");
-    expect(iterate).to.be.a("function");
-    expect(iterate.name).to.be("iterate");
-
-    const iterable = iterate("node", "script");
-    expect(iterable.next).to.be.a("function");
-  });
-});
-
-describe("*iterate(...string)", () => {
+describe("iterator(string, ...string)(...string)", () => {
   let iterate;
 
   beforeEach(() => {
     iterate = iterator("xyA:B:", "yes", "foo:", "bar:");
   });
 
-  it("should iterate over options and arguments", () => {
+  it("should yield options", () => {
+    const argv = ["-x", "--yes"];
+    const iterable = iterate(...argv);
+
+    expect(iterable.next().value.opt).to.be("-x");
+    expect(iterable.next().value.opt).to.be("--yes");
+  });
+
+  it("should yield terminator after options", () => {
+    const argv = ["-x", "--yes"];
+    const iterable = iterate(...argv);
+
+    expect(iterable.next().value.opt).to.be("-x");
+    expect(iterable.next().value.opt).to.be("--yes");
+    expect(iterable.next().value.tok).to.be("--");
+    expect(iterable.next().done).to.be(true);
+  });
+
+  it("should yield non-option arguments after terminator", () => {
     const argv = ["-x", "--yes", "file.txt"];
     const iterable = iterate(...argv);
 
     expect(iterable.next().value.opt).to.be("-x");
     expect(iterable.next().value.opt).to.be("--yes");
+    expect(iterable.next().value.tok).to.be("--");
     expect(iterable.next().value.tok).to.be("file.txt");
     expect(iterable.next().done).to.be(true);
   });
 
-  it("should set name for POSIX/GNU-style options", () => {
+  it("should yield {opt} for POSIX/GNU-style options", () => {
     const argv = ["-x", "--yes", "file.txt"];
     const iterable = iterate(...argv);
 
     expect(iterable.next().value.opt).to.be("-x");
     expect(iterable.next().value.opt).to.be("--yes");
     expect(iterable.next().value.opt).to.be(undefined);
+    expect(iterable.next().value.opt).to.be(undefined);
     expect(iterable.next().done).to.be(true);
   });
 
-  it("should expand combined short options", () => {
+  it("should yield expanded short options", () => {
     const argv = ["-xy"];
     const iterable = iterate(...argv);
 
     expect(iterable.next().value.opt).to.be("-x");
     expect(iterable.next().value.opt).to.be("-y");
+    expect(iterable.next().value.tok).to.be("--");
     expect(iterable.next().done).to.be(true);
   });
 
-  it("should support parsing option values", () => {
+  it("should yield {val} with option argument", () => {
     const argv = ["-A", "1", "-B2", "--foo", "FOO", "--bar=BAR"];
     const iterable = iterate(...argv);
 
@@ -56,10 +66,11 @@ describe("*iterate(...string)", () => {
     expect(iterable.next().value.val).to.be("2");
     expect(iterable.next().value.val).to.be("FOO");
     expect(iterable.next().value.val).to.be("BAR");
+    expect(iterable.next().value.tok).to.be("--");
     expect(iterable.next().done).to.be(true);
   });
 
-  it("should terminate options parsing after '--'", () => {
+  it("should yield unparsed tokens after '--'", () => {
     const argv = ["-x", "--", "-xy"];
     const iterable = iterate(...argv);
 
@@ -70,14 +81,16 @@ describe("*iterate(...string)", () => {
 
     expect(option.tok).to.be("-xy");
     expect(option.opt).to.be(undefined);
+    expect(option.val).to.be(undefined);
     expect(iterable.next().done).to.be(true);
   });
 
-  it("should recognize unambiguous value in long option", () => {
+  it("should yield {val} with unambiguous long option argument", () => {
     const argv = ["--foo=FOO"];
     const iterable = iterate(...argv);
 
     expect(iterable.next().value.opt).to.be("--foo");
+    expect(iterable.next().value.tok).to.be("--");
     expect(iterable.next().done).to.be(true);
   });
 
@@ -119,7 +132,7 @@ describe("*iterate(...string)", () => {
   });
 });
 
-describe("iterate(...string, {console})", () => {
+describe("iterator(string, ...string)(...string, {console})", () => {
   let iterate, console, calledWith;
 
   beforeEach(() => {
@@ -134,6 +147,44 @@ describe("iterate(...string, {console})", () => {
 
     expect(err).to.be.a("string");
     expect(calledWith).to.be(err);
+  });
+});
+
+describe("iterator(\"-\" + …, ...string)(...string)", () => {
+  let iterate;
+
+  beforeEach(() => {
+    iterate = iterator("-xyA:B:", "yes", "foo:", "bar:");
+  });
+
+  it("should yield non-option arguments in-place", () => {
+    const argv = ["-x", "file.txt", "--yes"];
+    const iterable = iterate(...argv);
+
+    expect(iterable.next().value.opt).to.be("-x");
+    expect(iterable.next().value.tok).to.be("file.txt");
+    expect(iterable.next().value.opt).to.be("--yes");
+    expect(iterable.next().value.tok).to.be("--");
+    expect(iterable.next().done).to.be(true);
+  });
+});
+
+describe("iterator(\"+\" + …, ...string)(...string)", () => {
+  let iterate;
+
+  beforeEach(() => {
+    iterate = iterator("+xyA:B:", "yes", "foo:", "bar:");
+  });
+
+  it("should yield unparsed tokens after non-option argument", () => {
+    const argv = ["-x", "file.txt", "--yes"];
+    const iterable = iterate(...argv);
+
+    expect(iterable.next().value.opt).to.be("-x");
+    expect(iterable.next().value.tok).to.be("--");
+    expect(iterable.next().value.tok).to.be("file.txt");
+    expect(iterable.next().value.tok).to.be("--yes");
+    expect(iterable.next().done).to.be(true);
   });
 });
 
