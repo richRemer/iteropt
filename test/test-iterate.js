@@ -94,6 +94,21 @@ describe("iterator(string, ...string)(...string)", () => {
     expect(iterable.next().done).to.be(true);
   });
 
+  it("should resume after broken loop", () => {
+    const argv = ["-x", "-y", "--yes"];
+    const iterable = iterate(...argv);
+
+    // iterate one value then break loop
+    for (const _ of iterable) break;
+    // NOTE: under the hood, the 'break' is a call to iterable.return()
+
+    // iterable should resume from second value
+    expect(iterable.next().value.opt).to.be("-y");
+    expect(iterable.next().value.opt).to.be("--yes");
+    expect(iterable.next().value.tok).to.be("--");
+    expect(iterable.next().done).to.be(true);
+  });
+
   it("should end iteration on error", () => {
     const argv = ["-A", "--option-like"];
     const iterable = iterate(...argv);

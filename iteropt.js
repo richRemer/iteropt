@@ -10,7 +10,25 @@ export default function makeIteropt(posix, ...gnu) {
     case "+": mode = ModeStop; posix = posix.slice(1); break;
   }
 
-  return function *iteropt(...args) {
+  return function iteropt(...args) {
+    const iterable = iteroptGenerator(...args);
+
+    // return iteration wrapper which does not implement .return
+    // because of this, the iterable will be resumable after break
+    return {
+      next,
+      [Symbol.iterator]() {
+        return this;
+      }
+    };
+
+    function next() {
+      const {value, done} = iterable.next();
+      return {value, done};
+    }
+  }
+
+  function *iteroptGenerator(...args) {
     const options = typeof args[args.length-1] === "object" ? args.pop() : {};
     const console = options.console || undefined;
     const parser = new Parser(posix, ...gnu);
